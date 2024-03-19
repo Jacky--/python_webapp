@@ -39,17 +39,35 @@ async def select(sql, args, size=None):
             logging.info('rows returned: %s' % len(rs))
             return rs
     
-async def execute(sql, args):
+# async def execute(sql, args):
+#     log(sql)
+#     async with __pool as conn:
+#         try:
+#             async with conn.cursor(aiomysql.DictCursor) as cur:
+#                 await cur.execute(sql.replace('?', '%s'), args)
+#                 affected = cur.rowcount
+#         except BaseException as e:
+#             raise
+#         return affected
+        
+async def execute(sql, args, autocommit=True):
     log(sql)
-    async with __pool.get() as conn:
+    with (await __pool) as conn:
+        if not autocommit:
+            await conn.begin()
         try:
-            async with conn.cursor() as cur:
-                await cur.execute(sql.replace('?', '%s'), args)
-                affected = cur.rowcount
+            cur = await conn.cursor()
+            await cur.execute(sql.replace('?', '%s'), args)
+            affected = cur.rowcount
+            await cur.close()
+            if not autocommit:
+                await conn.commit()
         except BaseException as e:
+            if not autocommit:
+                await conn.rollback()
             raise
         return affected
-    
+
 def create_args_string(num):
     L = []
     for n in range(num):
@@ -98,7 +116,7 @@ class ModelMetaclass(type):
         if name == 'Model':
             return type.__new__(cls, name, bases, attrs)
         #获取table名称
-        tableName = attrs,get('__table__', None) or name
+        tableName = attrs.get('__table__', None) or name
         logging.info('found model: %s (table: %s)' % (name, tableName))
         #获取所有的Field和主键名
         mappings = dict()
