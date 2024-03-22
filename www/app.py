@@ -113,7 +113,7 @@ def index(request):
     return web.Response(body=b'<h1>Awesome</h1>', headers={'content-type':'text/html'})
 
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www', password='www', db='awesome')
+    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www-data', password='www-data', db='awesome')
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ])
@@ -123,6 +123,12 @@ async def init(loop):
     srv = await loop.create_server(app.make_handler(), '127.0.0.1', 9000)
     logging.info('server started at http://127.0.0.1:9000...')
     return srv
+
+    # app = web.Application(loop=loop)
+    # app.router.add_route('GET', '/', index)
+    # srv = await loop.create_server(app.make_handler(), '127.0.0.1', 9000)
+    # logging.info('server started at http://127.0.0.1:9000...')
+    # return srv
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(init(loop))
